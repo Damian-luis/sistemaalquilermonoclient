@@ -26,7 +26,7 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
-    await login({ username });
+    await login(username);
     router.push('/home');
     handleClose();
   };
