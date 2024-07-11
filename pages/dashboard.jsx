@@ -11,6 +11,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { addStationService } from './api';
 import { addScooterToStationService,getStationsService } from './api';
 import { Select,MenuItem } from '@mui/material';
+import notify from "../utils/notify"
+import { Toaster } from 'react-hot-toast';
 export default function Dashboard() {
   const { user } = useAuth();
 
@@ -41,18 +43,19 @@ export default function Dashboard() {
 
   const handleAddStation = async () => {
     try {
-      await addStationService({ 
+     await addStationService({ 
         name: stationName,
         location:stationLocation
        });
+      notify('success', 'Estación agregada exitosamente');
       setStationName("")
       setStationLocation("")
       handleCloseStation();
     } catch (error) {
+      notify('error', 'No se ha podido añadir la estación')
       console.error('Error al añadir la estación:', error);
     }
   };
-
   const handleAddScooter = async () => {
     try {
       const newScooter={
@@ -61,9 +64,10 @@ export default function Dashboard() {
         identifier:scooterName
       }
       await addScooterToStationService(newScooter,stationId);
-      
+      notify('success', 'Unidad agregada exitosamente');
       handleCloseScooter();
     } catch (error) {
+      notify('error', 'No se ha podido agregar la unidad')
       console.error('Error al añadir el monopatín:', error);
     }
   };
@@ -99,12 +103,16 @@ export default function Dashboard() {
       fontFamily: '"Work Sans", "Noto Sans", sans-serif',
     }}
   >
-    <Button variant="outlined" onClick={handleClickOpenStation}>
+
+    <div style={{display:"flex",gap:"15px",alignSelf:"end",paddingTop:"20px"}}>
+    <Button variant="contained" color="success" onClick={handleClickOpenStation}>
         Añadir stacion
       </Button>
-      <Button variant="outlined" onClick={handleClickOpenScooter}>
+      <Button variant="contained" color="success" onClick={handleClickOpenScooter}>
         Añadir monopatin
       </Button>
+    </div>
+    
     <div style={{ display: "flex", height: "100%", flexGrow: 1, flexDirection: "column" }}>
       
       <div style={{ padding: "20px 160px", display: "flex", flex: 1, justifyContent: "center" }}>
@@ -391,8 +399,7 @@ export default function Dashboard() {
 
 
 
-
-
+    <Toaster />
       <Dialog open={openModalStation} onClose={handleCloseStation}>
         <DialogTitle>Añadir estación</DialogTitle>
         <DialogContent>

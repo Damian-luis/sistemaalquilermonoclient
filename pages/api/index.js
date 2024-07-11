@@ -74,6 +74,19 @@ export async function addStationService(station) {
   }
 }
 
+export async function makeDevolutionScooterService(devolution) {
+  try {
+    const response = await apiClient.put(`rentals/makeDevolution`, {
+      devolution
+     });
+    
+    return response.data
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
 /*
 export async function getStationsService() {
   try {

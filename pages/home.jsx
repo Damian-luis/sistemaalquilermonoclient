@@ -1,19 +1,14 @@
 import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from '../utils/protectedRoute';
-import { historicalService, getStationsService, reservationService } from './api';
+import { historicalService, getStationsService, reservationService, makeDevolutionScooterService } from './api';
 import Typography from '@mui/material/Typography';
 import Modal from '@mui/material/Modal';
 import React, { useState, useEffect } from 'react';
-import { Button, Box } from '@mui/material';
-import TextField from '@mui/material/TextField';
+import { Button, Box, TextField, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Chip, Select, MenuItem } from '@mui/material';
 import BalanceInfo from '../componentes/BalanceInfo';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import Chip from '@mui/material/Chip';
+import notify from "../utils/notify";
+import { Toaster } from 'react-hot-toast';
 function Home() {
   const dni = sessionStorage.getItem('dni');
   const { user,userData } = useAuth();
@@ -24,7 +19,7 @@ function Home() {
   const [rentalDate, setRentalDate] = useState(new Date());
   const [returnDate, setReturnDate] = useState(null);
   const [openRerservationModal, setOpenReservetionModal] = useState(false);
-
+  const [stationId, setStationId] = useState('');
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const handleOpenReservationModal = () => setOpenReservetionModal(true);
@@ -33,10 +28,9 @@ function Home() {
     try {
       const historical = await historicalService(dni);
       const stations = await getStationsService();
-      console.log(historical)
         setHistorial(historical);
         setStations(stations);
-      
+        
     } catch (error) {
       console.log(error);
     }
@@ -55,7 +49,7 @@ function Home() {
     const reservationData = {
       station_name:selectedScooter.station.name,
       user_id: user.id,
-      user_dni:user?.username,
+      user_dni:dni,
       scooter_id: selectedScooter.scooter.id,
       location_rental:selectedScooter.scooter.location,
       scooter_identifier:selectedScooter.scooter.identifier,
@@ -63,16 +57,43 @@ function Home() {
       returnDate: returnDate,
       start_station_id: selectedScooter.station.id,
       end_station_id: null,
-      usedMinutes: 0,
+      usedMinutes: selectedTime,
       status: 'active',
     };
 
     try {
       await reservationService(reservationData);
+      notify('success', 'Unidad reservada exitosamente');
+      setOpenReservetionModal(false);
       console.log('Reservation made successfully');
     } catch (e) {
+      notify('error', 'No se reservar unidad')
       console.log(e);
     }
+  };
+
+  const handleMakeDevolution = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const devolutionData = {
+        ...historical.actualScooter,
+        station_name_devolution:stationId ,
+      };
+      await makeDevolutionScooterService(devolutionData);
+      notify('success', 'Unidad devuelta exitosamente');
+      setOpen(false);
+      console.log('Reservation made successfully');
+    } catch (e) {
+      notify('error', 'No se ha podido procesar la devolución')
+      console.log(e);
+    }
+  };
+
+  const [selectedTime, setSelectedTime] = useState('');
+
+  const handleChange = (event) => {
+    setSelectedTime(event.target.value);
   };
 
   return (
@@ -152,11 +173,23 @@ function Home() {
         }}
       ></div>
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <Typography style={{ color: '#111418', fontSize: '16px', fontWeight: 'medium', lineHeight: 'normal' }}>
-          {userData ? userData.rentedScooterId : <p>Cargando</p>}
+            <Typography style={{ color: '#111418', fontSize: '16px', fontWeight: 'medium', lineHeight: 'normal' }}>
+          {historical && historical.actualScooter ? (
+            <>
+              <span>{historical.actualScooter.scooter_identifier}</span>
+            </>
+          ) : (
+            <p>Cargando</p>
+          )}
         </Typography>
         <Typography style={{ color: '#637488', fontSize: '14px', fontWeight: 'normal', lineHeight: 'normal' }}>
-          Battery: 50%
+          Tiempo de alquiler: {historical && historical.actualScooter ? (
+            <>
+              <span>{historical.actualScooter.usedMinutes}</span> m.
+            </>
+          ) : (
+            <p>Cargando</p>
+          )}
         </Typography>
       </div>
     </div>
@@ -276,7 +309,7 @@ function Home() {
             Historial de alquiler
           </Typography>
 
-          {historical.map(item => (
+          {historical.historical.map(item => (
             <div key={item.id} style={{
               display: 'flex',
               alignItems: 'center',
@@ -302,7 +335,7 @@ function Home() {
                   fontWeight: 'medium',
                   lineHeight: 'normal'
                 }}>
-                  {item.rental.scooter_identifier}
+                  {item.scooter_identifier}
                 </Typography>
                 <Typography style={{
                   color: '#637488',
@@ -310,7 +343,7 @@ function Home() {
                   fontWeight: 'normal',
                   lineHeight: 'normal'
                 }}>
-                  {item.rental.rentalDate}
+                  {item.rentalDate}
                 </Typography>
               </div>
             </div>
@@ -340,15 +373,31 @@ function Home() {
             Debe entregar el rodado a la autoridad compotente. <br/>
             Tenga en cuenta la hora de devolución, cualquier demora se registrará en el sistema.
           </DialogContentText>
+          <DialogContentText id="alert-dialog-description">
+            Selecciona la estación en donde devolverás la unidad.
+          </DialogContentText>
         </DialogContent>
+        <Select
+              labelId="stationIdLabel"
+              id="stationId"
+              value={stationId}
+              onChange={(e) => setStationId(e.target.value)}
+              fullWidth
+            >
+              {stations.map((station) => (
+                <MenuItem key={station.id} value={station.name}>
+                  {station.name}
+                </MenuItem>
+              ))}
+            </Select>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleClose} autoFocus>
+          <Button onClick={handleMakeDevolution} autoFocus>
             Devolver
           </Button>
         </DialogActions>
       </Dialog>
-
+      <Toaster />
       <Dialog
         open={openRerservationModal}
         onClose={handleCloseRerservationModal}
@@ -361,9 +410,21 @@ function Home() {
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Reservar unidad. <br/>
-            Tenga en cuenta la hora de devolución, cualquier demora se registrará en el sistema.
+            Tenga en cuenta el tiempo de devolución, cualquier demora se registrará en el sistema.
           </DialogContentText>
         </DialogContent>
+                <Select
+                labelId="time-select-label"
+                id="time-select"
+                value={selectedTime}
+                onChange={handleChange}
+                label="Tiempo"
+              >
+                <MenuItem value={30}>30 minutos</MenuItem>
+                <MenuItem value={60}>1 hora</MenuItem>
+                <MenuItem value={90}>1 hora y 30'</MenuItem>
+                <MenuItem value={120}>2 horas</MenuItem>
+              </Select>
         <DialogActions>
           <Button onClick={handleCloseRerservationModal}>Cancelar</Button>
           <Button onClick={handleMakeReservation} autoFocus>
