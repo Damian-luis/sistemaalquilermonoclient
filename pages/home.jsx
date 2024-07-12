@@ -9,9 +9,12 @@ import BalanceInfo from '../componentes/BalanceInfo';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import notify from "../utils/notify";
 import { Toaster } from 'react-hot-toast';
+import { userService } from './api';
+import {formatDate} from "../utils/time";
+import LogoutIcon from '@mui/icons-material/Logout';
 function Home() {
-  const dni = sessionStorage.getItem('dni');
-  const { user,userData } = useAuth();
+  
+  const { user} = useAuth();
   const [historical, setHistorial] = useState([]);
   const [stations, setStations] = useState([]);
   const [open, setOpen] = useState(false);
@@ -20,17 +23,20 @@ function Home() {
   const [returnDate, setReturnDate] = useState(null);
   const [openRerservationModal, setOpenReservetionModal] = useState(false);
   const [stationId, setStationId] = useState('');
+  const [userData, setUser] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const handleOpenReservationModal = () => setOpenReservetionModal(true);
   const handleCloseRerservationModal = () => setOpenReservetionModal(false);
   const fetchHistorical = async () => {
     try {
-      const historical = await historicalService(dni);
+      const historical = await historicalService(user);
       const stations = await getStationsService();
+      const userData= await userService(user)
         setHistorial(historical);
         setStations(stations);
-        
+        setUser(userData.user)
+        console.log(stations)
     } catch (error) {
       console.log(error);
     }
@@ -49,7 +55,7 @@ function Home() {
     const reservationData = {
       station_name:selectedScooter.station.name,
       user_id: user.id,
-      user_dni:dni,
+      user_dni:user,
       scooter_id: selectedScooter.scooter.id,
       location_rental:selectedScooter.scooter.location,
       scooter_identifier:selectedScooter.scooter.identifier,
@@ -59,13 +65,20 @@ function Home() {
       end_station_id: null,
       usedMinutes: selectedTime,
       status: 'active',
+      isBonusBeingUsed:userData.bonusIsBeingUsed
     };
 
     try {
-      await reservationService(reservationData);
-      notify('success', 'Unidad reservada exitosamente');
-      setOpenReservetionModal(false);
-      console.log('Reservation made successfully');
+      const data=await reservationService(reservationData);
+      if(data.status===200){
+        notify('success', 'Unidad reservada exitosamente');
+        setOpenReservetionModal(false)
+      }
+      else {
+        notify('error', 'No se pudo reservar unidad')
+        setOpenReservetionModal(false)
+      }
+
     } catch (e) {
       notify('error', 'No se reservar unidad')
       console.log(e);
@@ -90,16 +103,36 @@ function Home() {
     }
   };
 
-  const [selectedTime, setSelectedTime] = useState('');
+  const [selectedTime, setSelectedTime] = useState(30);
 
   const handleChange = (event) => {
+    console.log("handleChange event:", event.target.value);
     setSelectedTime(event.target.value);
+    console.log("selectedTime after handleChange:", selectedTime);
+  };
+  
+
+  
+  const activateBonus = () => {
+    setUser(prevUserData => ({
+      ...prevUserData,
+      available_minutes:30,
+      bonusMinutes:0,
+      bonusIsBeingUsed:true
+    }));
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('dni');
+    window.location.href = '/';
+  };
   return (
     <div>
       <ProtectedRoute>
-        
+      <Button variant="contained" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px',backgroundColor:"#2e7d32",borderRadius:"10px" }}>
+      <Typography style={{fontSize:"12px"}}>Salir</Typography>
+      <LogoutIcon />
+    </Button>
 <div
       style={{
         fontFamily: '"Work Sans", "Noto Sans", sans-serif',
@@ -131,7 +164,7 @@ function Home() {
                 </Typography>
               </div>
               <div style={{ minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <BalanceInfo/>
+                <BalanceInfo userData={userData} activateBonus={activateBonus}/>
               </div>
             </div>
             
@@ -225,6 +258,26 @@ function Home() {
 
 
 
+{userData && userData.available_minutes <= 30 ? (
+  <Typography
+    style={{
+      color: 'red',
+      fontSize: '14px',
+      fontWeight: 'bold',
+      lineHeight: 'normal',
+      marginTop: '10px',
+    }}
+  >
+    Te quedaste sin minutos disponibles
+  </Typography> 
+) : (
+  <div>
+    <p>Minutos disponibles: {userData ? userData.available_minutes : 'Cargando...'}</p>
+  </div>
+)}
+
+
+
   <Typography
                       variant="h3"
                       style={{
@@ -240,7 +293,7 @@ function Home() {
                     >
                       Estaciones cercanas
                     </Typography>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(158px, 1fr))', gap: '10px', padding: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(158px, 1fr))', gap: '10px', paddingTop: '50px' }}>
                       {stations.map((station) => (
                         <div key={station.id} style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '10px',alignItems:"center",width:"100px" }}>
                           <AccountBalanceIcon style={{width:"50px",height:"50px"}}/>
@@ -251,6 +304,7 @@ function Home() {
                               fontSize: '16px',
                               fontWeight: 'medium',
                               lineHeight: 'normal',
+                              textAlign:"center"
                             }}
                           >
                             {station.name}
@@ -259,8 +313,9 @@ function Home() {
                           </Typography>
                           <div>
                           
+                          
                           {userData && userData.rentedScooterId === null && (
-  station.scooter.map((scooter) => (
+  station.scooters.map((scooter) => (
     <Button key={scooter.id} onClick={() => handleSelectScooter(station, scooter)}>
       <Typography
         style={{
@@ -273,17 +328,18 @@ function Home() {
         <Chip
           label={scooter.identifier}
           color={
-            scooter.status === "available"
+            scooter.status === "available" && userData.available_minutes >= 30
               ? "success" 
               : "error"
           }
-          clickable={scooter.status === "available"} 
-          onClick={scooter.status === "available" ? handleOpenReservationModal : null}
+          clickable={scooter.status === "available" && userData.available_minutes >= 30} 
+          onClick={scooter.status === "available" && userData.available_minutes >= 30 ? handleOpenReservationModal : null}
         />
       </Typography>
     </Button>
   ))
 )}
+
 
 
                           </div>
@@ -343,7 +399,7 @@ function Home() {
                   fontWeight: 'normal',
                   lineHeight: 'normal'
                 }}>
-                  {item.rentalDate}
+                  {formatDate(item.rentalDate)}
                 </Typography>
               </div>
             </div>
@@ -414,17 +470,26 @@ function Home() {
           </DialogContentText>
         </DialogContent>
                 <Select
-                labelId="time-select-label"
-                id="time-select"
-                value={selectedTime}
-                onChange={handleChange}
-                label="Tiempo"
-              >
-                <MenuItem value={30}>30 minutos</MenuItem>
-                <MenuItem value={60}>1 hora</MenuItem>
-                <MenuItem value={90}>1 hora y 30'</MenuItem>
-                <MenuItem value={120}>2 horas</MenuItem>
-              </Select>
+          labelId="time-select-label"
+          id="time-select"
+          value={selectedTime}
+          onChange={handleChange}
+          label="Tiempo"
+        >
+          { userData.bonusIsBeingUsed ? (
+            [<MenuItem key={30} value={30}>30 minutos</MenuItem>]
+          ) : (
+            [
+              <MenuItem key={30} value={30}>30 minutos</MenuItem>,
+              <MenuItem key={60} value={60}>1 hora</MenuItem>,
+              <MenuItem key={90} value={90}>1 hora y 30 minutos</MenuItem>,
+              <MenuItem key={120} value={120}>2 horas</MenuItem>,
+            ] 
+          ) }
+        </Select>
+
+
+
         <DialogActions>
           <Button onClick={handleCloseRerservationModal}>Cancelar</Button>
           <Button onClick={handleMakeReservation} autoFocus>

@@ -7,7 +7,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userData, setUserData] = useState(null);
- 
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const login = async (userData) => {
     setLoading(true);
@@ -15,7 +15,8 @@ export function AuthProvider({ children }) {
       const datauserforcontext=await userService(userData)
       setUser(datauserforcontext)
       setUserData(datauserforcontext.user)
-      
+      console.log("aui viene use de contex")
+      console.log(datauserforcontext)
       sessionStorage.setItem('dni', datauserforcontext.user.dni);
     }
     catch(e){
@@ -32,8 +33,23 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const loginAdmin = async (credentials) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const datauserforcontext = await adminService(credentials);;
+      setIsAdmin(true);
+      console.log(isAdmin)
+    } catch (e) {
+      console.error(e);
+      setError(e.message || 'Error logging in');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, error,userData }}>
+    <AuthContext.Provider value={{ user,  isAdmin,loginAdmin,login, logout, loading, error,userData }}>
       {children}
     </AuthContext.Provider>
   );

@@ -34,13 +34,13 @@ import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   useEffect(() => {
     if (!user) {
       router.replace('/');
     }
-  }, [user, router]);
+  }, [user, isAdmin, router]);
 
   if (!user) {
     return null;

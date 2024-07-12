@@ -13,6 +13,11 @@ import { addScooterToStationService,getStationsService } from './api';
 import { Select,MenuItem } from '@mui/material';
 import notify from "../utils/notify"
 import { Toaster } from 'react-hot-toast';
+import { getDashboardInfoService } from './api';
+import {formatDate} from "../utils/time";
+import RentalChart from '../componentes/RentalChart';
+import { Typography } from '@mui/material';
+import LogoutIcon from '@mui/icons-material/Logout';
 export default function Dashboard() {
   const { user } = useAuth();
 
@@ -23,7 +28,20 @@ export default function Dashboard() {
   const [stationLocation, setStationLocation] = useState('');
   const [scooterName, setScooterName] = useState('');
   const [stationId, setStationId] = useState('');
+  const [adminData, setAdminData] = useState(false);
+  const getData = async () => {
+    try {
+      const data = await  getDashboardInfoService()
+        setAdminData(data.user)
+        console.log(data)
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
+  useEffect(() => {
+    getData();
+  }, []);
 
   const handleClickOpenStation = () => {
     setOpenModalStation(true);
@@ -90,7 +108,16 @@ export default function Dashboard() {
     fetchHistorical();
   }, []);
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('dni');
+    window.location.href = '/';
+  };
   return (
+<>
+<Button variant="contained" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px',backgroundColor:"#2e7d32",borderRadius:"10px" }}>
+      <Typography style={{fontSize:"12px"}}>Salir</Typography>
+      <LogoutIcon />
+    </Button>
     <div
     style={{
       position: "relative",
@@ -151,8 +178,7 @@ export default function Dashboard() {
       }}
     >
       <p style={{ color: "#1c190d", fontSize: "16px", fontWeight: "500", lineHeight: "1.5" }}>Total de alquileres</p>
-      <p style={{ color: "#1c190d", fontSize: "24px", fontWeight: "bold", lineHeight: "1.25", letterSpacing: "0" }}>142,367</p>
-      <p style={{ color: "#078812", fontSize: "16px", fontWeight: "500", lineHeight: "1.5" }}>+15%</p>
+      <p style={{ color: "#1c190d", fontSize: "24px", fontWeight: "bold", lineHeight: "1.25", letterSpacing: "0" }}>{adminData && adminData.rentals && adminData.rentals.length}</p>
     </div>
     <div
       style={{
@@ -167,8 +193,7 @@ export default function Dashboard() {
       }}
     >
       <p style={{ color: "#1c190d", fontSize: "16px", fontWeight: "500", lineHeight: "1.5" }}>Minutos alquilados</p>
-      <p style={{ color: "#1c190d", fontSize: "24px", fontWeight: "bold", lineHeight: "1.25", letterSpacing: "0" }}>1,620,572</p>
-      <p style={{ color: "#078812", fontSize: "16px", fontWeight: "500", lineHeight: "1.5" }}>+12%</p>
+      <p style={{ color: "#1c190d", fontSize: "24px", fontWeight: "bold", lineHeight: "1.25", letterSpacing: "0" }}>{adminData && adminData.totalRentedMinutes}</p>
     </div>
     <div
       style={{
@@ -183,148 +208,88 @@ export default function Dashboard() {
       }}
     >
       <p style={{ color: "#1c190d", fontSize: "16px", fontWeight: "500", lineHeight: "1.5" }}>Alquileres por dia</p>
-      <p style={{ color: "#1c190d", fontSize: "24px", fontWeight: "bold", lineHeight: "1.25", letterSpacing: "0" }}>1,203</p>
-      <p style={{ color: "#078812", fontSize: "16px", fontWeight: "500", lineHeight: "1.5" }}>+5%</p>
+      <p style={{ color: "#1c190d", fontSize: "24px", fontWeight: "bold", lineHeight: "1.25", letterSpacing: "0" }}>{adminData && adminData.averageRentalsPerDay}</p>
     </div>
   </div>
 
 
+  {adminData.rentalsPerDay ? (
+        <RentalChart data={adminData.rentalsPerDay} />
+      ) : (
+        <p>No hay datos que mostrar</p>
+      )}
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              padding: "16px",
-              gap: "32px",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", gap: "32px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-                <h3 style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                  Your next payment
-                </h3>
-                <div style={{ display: "flex", alignItems: "center", padding: "16px", gap: "12px", border: "1px solid #f4f1e7", borderRadius: "8px" }}>
-                  <div
-                    style={{
-                      backgroundImage: 'url("https://cdn.usegalileo.ai/stability/0fd6cc26-0ec6-47cb-bda3-e0010a4e105e.png")',
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                      aspectRatio: "1",
-                      backgroundSize: "cover",
-                      borderRadius: "9999px",
-                      width: "48px",
-                      height: "48px",
-                    }}
-                  ></div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        John Doe
-                      </p>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "normal", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        $ 34.90
-                      </p>
-                    </div>
-                    <p style={{ color: "#9c8c49", fontSize: "14px", fontWeight: "normal", lineHeight: "1.5" }}>Due: July 31, 2024</p>
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-                <h3 style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                  Your last ride
-                </h3>
-                <div style={{ display: "flex", alignItems: "center", padding: "16px", gap: "12px", border: "1px solid #f4f1e7", borderRadius: "8px" }}>
-                  <div
-                    style={{
-                      backgroundImage: 'url("https://cdn.usegalileo.ai/stability/20e17e6a-553b-4b4d-96b0-f183b57a7b4e.png")',
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                      aspectRatio: "1",
-                      backgroundSize: "cover",
-                      borderRadius: "9999px",
-                      width: "48px",
-                      height: "48px",
-                    }}
-                  ></div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        John Doe
-                      </p>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "normal", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        14:00
-                      </p>
-                    </div>
-                    <p style={{ color: "#9c8c49", fontSize: "14px", fontWeight: "normal", lineHeight: "1.5" }}>Yesterday</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: "32px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-                <h3 style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                  Your reports
-                </h3>
-                <div style={{ display: "flex", alignItems: "center", padding: "16px", gap: "12px", border: "1px solid #f4f1e7", borderRadius: "8px" }}>
-                  <div
-                    style={{
-                      backgroundImage: 'url("https://cdn.usegalileo.ai/stability/268897b4-6699-43a1-9da1-9d60a5466e68.png")',
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                      aspectRatio: "1",
-                      backgroundSize: "cover",
-                      borderRadius: "9999px",
-                      width: "48px",
-                      height: "48px",
-                    }}
-                  ></div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        John Doe
-                      </p>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "normal", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        $ 34.90
-                      </p>
-                    </div>
-                    <p style={{ color: "#9c8c49", fontSize: "14px", fontWeight: "normal", lineHeight: "1.5" }}>Due: July 31, 2024</p>
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-                <h3 style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                  Your last ride
-                </h3>
-                <div style={{ display: "flex", alignItems: "center", padding: "16px", gap: "12px", border: "1px solid #f4f1e7", borderRadius: "8px" }}>
-                  <div
-                    style={{
-                      backgroundImage: 'url("https://cdn.usegalileo.ai/stability/20e17e6a-553b-4b4d-96b0-f183b57a7b4e.png")',
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                      aspectRatio: "1",
-                      backgroundSize: "cover",
-                      borderRadius: "9999px",
-                      width: "48px",
-                      height: "48px",
-                    }}
-                  ></div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "500", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        John Doe
-                      </p>
-                      <p style={{ color: "#1c190d", fontSize: "14px", fontWeight: "normal", lineHeight: "1.25", letterSpacing: "-0.015em" }}>
-                        14:00
-                      </p>
-                    </div>
-                    <p style={{ color: "#9c8c49", fontSize: "14px", fontWeight: "normal", lineHeight: "1.5" }}>Yesterday</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <div>
+  <h2
+    style={{
+      color: "#1c190d",
+      fontSize: "22px",
+      fontWeight: "bold",
+      lineHeight: "1.25",
+      letterSpacing: "-0.015em",
+      paddingLeft: "16px",
+      paddingBottom: "12px",
+      paddingTop: "20px",
+    }}
+  >
+    Lista de usuarios
+  </h2>
+  <div style={{ paddingLeft: "16px", paddingRight: "16px", paddingTop: "12px", paddingBottom: "12px" }}>
+    <div style={{ display: "flex", overflow: "hidden", borderRadius: "12px", border: "1px solid #e8e3ce", backgroundColor: "#fcfbf8" }}>
+      <table style={{ flex: 1 }}>
+        <thead>
+          <tr style={{ backgroundColor: "#fcfbf8" }}>
+            <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Usuario</th>
+            <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Movil alquilado</th>
+            <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Alquileres N</th>
+            <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Pena</th>
+            <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Bonus</th>
+            <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Minutos alquilados</th>
+            <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Minutos disponibles</th>
+          </tr>
+        </thead>
+        <tbody>
+          {adminData && adminData.users && adminData.users.length > 0 ? (
+            adminData.users.map((user) => (
+              <tr key={user.id} style={{ borderTop: "1px solid #e8e3ce" }}>
+                <td style={{ height: "72px", padding: "8px", width: "400px", color: "#1c190d", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                  {user.dni}
+                </td>
+                <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                  {user.rentedScooterId ? user.rentedScooterId : "N/A"}
+                </td>
+                <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                  {user.rentalCount}
+                </td>
+                <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                  {user.punishment==="false" ? "Sí" : "No"}
+                </td>
+                <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                  {user.bonusMinutes===30 ? "Sí" : "No"}
+                </td>
+                <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                  {user.historicMinutesRented}
+                </td>
+                <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                  {user.available_minutes}
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="6" style={{ textAlign: "center", padding: "8px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+                No user data available.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+
 
           <div>
     <h2
@@ -339,58 +304,60 @@ export default function Dashboard() {
         paddingTop: "20px",
       }}
     >
-      Ride activity
+      Historial de alqiuleres
     </h2>
     <div style={{ paddingLeft: "16px", paddingRight: "16px", paddingTop: "12px", paddingBottom: "12px" }}>
       <div style={{ display: "flex", overflow: "hidden", borderRadius: "12px", border: "1px solid #e8e3ce", backgroundColor: "#fcfbf8" }}>
         <table style={{ flex: 1 }}>
           <thead>
             <tr style={{ backgroundColor: "#fcfbf8" }}>
-              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Rider</th>
-              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Start</th>
-              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>End</th>
-              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Duration</th>
-              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Distance</th>
-              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Cost</th>
+              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Usuario</th>
+              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Inicio</th>
+              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Fin</th>
+              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Duracion</th>
+              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Estado</th>
+              <th style={{ padding: "12px", textAlign: "left", color: "#1c190d", width: "400px", fontSize: "14px", fontWeight: "500", lineHeight: "1.5" }}>Equipo</th>
             </tr>
           </thead>
           <tbody>
-            <tr style={{ borderTop: "1px solid #e8e3ce" }}>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#1c190d", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>Luisa M.</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>7:45 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>8:00 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>15 minutes</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>2.5 miles</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>$5.50</td>
-            </tr>
-            <tr style={{ borderTop: "1px solid #e8e3ce" }}>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#1c190d", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>Mike L.</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>8:15 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>8:30 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>15 minutes</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>2.0 miles</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>$4.50</td>
-            </tr>
-            <tr style={{ borderTop: "1px solid #e8e3ce" }}>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#1c190d", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>Jenny P.</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>8:30 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>8:45 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>15 minutes</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>2.5 miles</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>$5.50</td>
-            </tr>
-            <tr style={{ borderTop: "1px solid #e8e3ce" }}>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#1c190d", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>Sam H.</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>9:00 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>9:15 AM</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>15 minutes</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>2.0 miles</td>
-              <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>$4.50</td>
-            </tr>
-          </tbody>
+  {adminData && adminData.rentals && adminData.rentals.length > 0 ? (
+    adminData.rentals.map((rental) => (
+      <tr key={rental.id} style={{ borderTop: "1px solid #e8e3ce" }}>
+        <td style={{ height: "72px", padding: "8px", width: "400px", color: "#1c190d", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+          {rental.user_dni}
+        </td>
+        <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+        {formatDate(rental.rentalDate)}         
+        </td>
+        <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+          {formatDate(rental.returnDate)}
+        </td>
+        <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+          {rental.usedMinutes}
+        </td>
+        <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+          {rental.status}
+        </td>
+        <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+          {rental.scooter_identifier}
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="6" style={{ textAlign: "center", padding: "8px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
+        No rental data available.
+      </td>
+    </tr>
+  )}
+</tbody>
+
+
         </table>
       </div>
     </div>
+
+    
   </div>
 
         </div>
@@ -476,6 +443,6 @@ export default function Dashboard() {
 
 
   </div>
-  
+  </>
   );
 }
