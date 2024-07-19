@@ -18,9 +18,12 @@ import {formatDate} from "../utils/time";
 import RentalChart from '../componentes/RentalChart';
 import { Typography } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
+import Backdrop from '@mui/material/Backdrop';
+import CircularProgress from '@mui/material/CircularProgress';
+
 export default function Dashboard() {
   const { user } = useAuth();
-
+  const [loading, setLoading] = useState(false)
   const [openModalStation, setOpenModalStation] =useState(false);
   const [openModalScooter, setOpenModalScooter] =useState(false);
 
@@ -29,12 +32,17 @@ export default function Dashboard() {
   const [scooterName, setScooterName] = useState('');
   const [stationId, setStationId] = useState('');
   const [adminData, setAdminData] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   const getData = async () => {
     try {
+      setLoading(true)
       const data = await  getDashboardInfoService()
         setAdminData(data.user)
         console.log(data)
+        setLoading(false)
     } catch (error) {
+      setLoading(false)
       console.log(error);
     }
   };
@@ -60,7 +68,15 @@ export default function Dashboard() {
 
 
   const handleAddStation = async () => {
-    try {
+    try {      
+      
+      setErrorMessage("")
+      if (!stationName || !stationLocation) {
+        setErrorMessage('Este valor es obligatorio');
+        return;
+      }
+      setLoading(true)
+    
      await addStationService({ 
         name: stationName,
         location:stationLocation
@@ -69,13 +85,22 @@ export default function Dashboard() {
       setStationName("")
       setStationLocation("")
       handleCloseStation();
+      setLoading(false)
     } catch (error) {
       notify('error', 'No se ha podido añadir la estación')
+      setLoading(false)
       console.error('Error al añadir la estación:', error);
     }
   };
   const handleAddScooter = async () => {
-    try {
+    try {      
+      
+      setErrorMessage("")
+      if (!scooterName || !stationId) {
+        setErrorMessage('Este valor es obligatorio');
+        return;
+      }
+      setLoading(true)
       const newScooter={
         status:"available",
         station_id:stationId,
@@ -84,9 +109,11 @@ export default function Dashboard() {
       await addScooterToStationService(newScooter,stationId);
       notify('success', 'Unidad agregada exitosamente');
       handleCloseScooter();
+      setLoading(false)
     } catch (error) {
       notify('error', 'No se ha podido agregar la unidad')
       console.error('Error al añadir el monopatín:', error);
+      setLoading(false)
     }
   };
 
@@ -259,10 +286,10 @@ export default function Dashboard() {
                   {user.rentedScooterId ? user.rentedScooterId : "N/A"}
                 </td>
                 <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
-                  {user.rentalCount}
+                  {user.rentalCount===false?"N/A":user.rentalCount}
                 </td>
                 <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
-                  {user.punishment==="false" ? "Sí" : "No"}
+                  {user.punishment===true ? "Sí" : "No"} 
                 </td>
                 <td style={{ height: "72px", padding: "8px", width: "400px", color: "#9c8c49", fontSize: "14px", fontWeight: "400", lineHeight: "1.5" }}>
                   {user.bonusMinutes===30 ? "Sí" : "No"}
@@ -374,6 +401,8 @@ export default function Dashboard() {
             Por favor, introduce el nombre de la nueva estación.
           </DialogContentText>
           <TextField
+            error={!!errorMessage}
+            required
             autoFocus
             margin="dense"
             id="stationName"
@@ -387,6 +416,8 @@ export default function Dashboard() {
             Por favor, introduce la dirección de la estación.
           </DialogContentText>
           <TextField
+            error={!!errorMessage}
+            required
             autoFocus
             margin="dense"
             id="stationName"
@@ -411,6 +442,8 @@ export default function Dashboard() {
       Por favor, ingresa un codigo y asignalo a una estación.
     </DialogContentText>
     <TextField
+      error={!!errorMessage}
+      required
       autoFocus
       margin="dense"
       id="scooterId"
@@ -426,6 +459,7 @@ export default function Dashboard() {
       value={stationId}
       onChange={(e) => setStationId(e.target.value)}
       fullWidth
+      error={!!errorMessage}
     >
       {stations.map((station) => (
         <MenuItem key={station.id} value={station.id}>
@@ -441,7 +475,13 @@ export default function Dashboard() {
   </DialogActions>
 </Dialog>
 
-
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading}
+        //onClick={handleClose}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
   </div>
   </>
   );

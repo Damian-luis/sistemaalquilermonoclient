@@ -12,8 +12,13 @@ import { Toaster } from 'react-hot-toast';
 import { userService } from './api';
 import {formatDate} from "../utils/time";
 import LogoutIcon from '@mui/icons-material/Logout';
+import Backdrop from '@mui/material/Backdrop';
+import CircularProgress from '@mui/material/CircularProgress';
+import CountdownTimer from "../componentes/CountdownTimer"
+import {checkPunishment} from "../utils/checkPunishment"
+import styles from './home.module.css';
 function Home() {
-  
+  const [loading, setLoading] = useState(false)
   const { user} = useAuth();
   const [historical, setHistorial] = useState([]);
   const [stations, setStations] = useState([]);
@@ -22,23 +27,28 @@ function Home() {
   const [rentalDate, setRentalDate] = useState(new Date());
   const [returnDate, setReturnDate] = useState(null);
   const [openRerservationModal, setOpenReservetionModal] = useState(false);
-  const [stationId, setStationId] = useState('');
+  const [stationId, setStationId] = useState(false);
   const [userData, setUser] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const handleOpenReservationModal = () => setOpenReservetionModal(true);
   const handleCloseRerservationModal = () => setOpenReservetionModal(false);
+  const punishmentMessage = checkPunishment(userData);
   const fetchHistorical = async () => {
     try {
+      setLoading(true)
       const historical = await historicalService(user);
       const stations = await getStationsService();
       const userData= await userService(user)
         setHistorial(historical);
         setStations(stations);
         setUser(userData.user)
-        console.log(stations)
+        setLoading(false)
+        console.log(historical)
     } catch (error) {
       console.log(error);
+      setLoading(false)
     }
   };
 
@@ -52,6 +62,7 @@ function Home() {
 
   const handleMakeReservation = async (e) => {
     e.preventDefault();
+    setLoading(true)
     const reservationData = {
       station_name:selectedScooter.station.name,
       user_id: user.id,
@@ -72,34 +83,46 @@ function Home() {
       const data=await reservationService(reservationData);
       if(data.status===200){
         notify('success', 'Unidad reservada exitosamente');
+        await fetchHistorical();
         setOpenReservetionModal(false)
+        setLoading(false)
       }
       else {
         notify('error', 'No se pudo reservar unidad')
         setOpenReservetionModal(false)
+        setLoading(false)
       }
 
     } catch (e) {
       notify('error', 'No se reservar unidad')
       console.log(e);
+      setLoading(false)
     }
   };
 
   const handleMakeDevolution = async (e) => {
     e.preventDefault();
-    
+
+    if (!stationId) {
+      setErrorMessage("Este valor es obligatorio")
+      return;
+    }
+    setLoading(true)
     try {
       const devolutionData = {
         ...historical.actualScooter,
         station_name_devolution:stationId ,
       };
       await makeDevolutionScooterService(devolutionData);
+      await fetchHistorical();
       notify('success', 'Unidad devuelta exitosamente');
       setOpen(false);
       console.log('Reservation made successfully');
+      setLoading(false)
     } catch (e) {
       notify('error', 'No se ha podido procesar la devolución')
       console.log(e);
+      setLoading(false)
     }
   };
 
@@ -161,6 +184,9 @@ function Home() {
                 </Typography>
                 <Typography style={{ color: '#637488', fontSize: '14px', fontWeight: 'normal', lineHeight: 'normal' }}>
                   Listo para un viaje hoy?
+                  {punishmentMessage && (
+        <div className={styles.containerPunishment}>{punishmentMessage}</div>
+      )}
                 </Typography>
               </div>
               <div style={{ minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -169,9 +195,13 @@ function Home() {
             </div>
             
 
+            
+
+
 
             {userData && userData.rentedScooterId !== null && (
-  <>
+  <div className={styles.containerCenter}>
+  <div >
     <Typography
       variant="h3"
       style={{
@@ -252,13 +282,35 @@ function Home() {
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Realizar entrega</span>
       </Button>
     </div>
-  </>
+    </div>
+
+
+      
+ 
+
+
+
+    {historical.actualScooter && historical.actualScooter.rentalDate && historical.actualScooter.usedMinutes ? (
+        <CountdownTimer
+          rentalDate={historical.actualScooter.rentalDate}
+          durationMinutes={historical.actualScooter.usedMinutes}
+        />
+      ) : (
+        <div>Elige una unidad para empezar.</div>
+      )}
+
+
+    
+    </div>
 )}
 
 
 
 
-{userData && userData.available_minutes <= 30 ? (
+
+
+
+{userData && userData.available_minutes < 30 ? (
   <Typography
     style={{
       color: 'red',
@@ -295,7 +347,7 @@ function Home() {
                     </Typography>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(158px, 1fr))', gap: '10px', paddingTop: '50px' }}>
                       {stations.map((station) => (
-                        <div key={station.id} style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '10px',alignItems:"center",width:"100px" }}>
+                        <div key={station.id} style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '10px',alignItems:"center",width:"100%" }}>
                           <AccountBalanceIcon style={{width:"50px",height:"50px"}}/>
 
                           <Typography
@@ -314,7 +366,7 @@ function Home() {
                           <div>
                           
                           
-                          {userData && userData.rentedScooterId === null && (
+                          {userData && userData.rentedScooterId === null && !userData.punishment&& (
   station.scooters.map((scooter) => (
     <Button key={scooter.id} onClick={() => handleSelectScooter(station, scooter)}>
       <Typography
@@ -432,8 +484,12 @@ function Home() {
           <DialogContentText id="alert-dialog-description">
             Selecciona la estación en donde devolverás la unidad.
           </DialogContentText>
+          {errorMessage}
+
+          
         </DialogContent>
         <Select
+              error={!!errorMessage}
               labelId="stationIdLabel"
               id="stationId"
               value={stationId}
@@ -446,6 +502,7 @@ function Home() {
                 </MenuItem>
               ))}
             </Select>
+            
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleMakeDevolution} autoFocus>
@@ -498,6 +555,13 @@ function Home() {
         </DialogActions>
       </Dialog>
 
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading}
+        //onClick={handleClose}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
       </ProtectedRoute>
     </div>
   );

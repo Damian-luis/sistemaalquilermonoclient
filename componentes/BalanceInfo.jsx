@@ -8,7 +8,8 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { useState } from 'react';
 const BalanceInfo = ({ userData, activateBonus }) => {
-  
+  console.log("aqui tus props")
+  console.log(userData)
   const [open, setOpen] =useState(false);
 
   const handleClickOpen = () => {
@@ -62,7 +63,7 @@ const BalanceInfo = ({ userData, activateBonus }) => {
         alignItems: 'center',
         textAlign: 'center',
       }}
-      onClick={handleClickOpen}
+      onClick={userData?.bonusMinutes > 0 && userData?.punishment==!true? handleClickOpen : undefined}
       >
         <p style={{
           color: '#181810',
@@ -90,30 +91,31 @@ const BalanceInfo = ({ userData, activateBonus }) => {
         borderRadius: '8px',
         border: '1px solid #e5e7da',
         padding: '12px',
+        backgroundColor: userData?.punishment ? 'red' : '#fff',
         alignItems: 'center',
         textAlign: 'center'
       }}>
             <p style={{
-      color: '#181810',
+      color: userData?.punishment ? 'white' : '#181810',
       letterSpacing: 'light',
       fontSize: '1.5rem',
       fontWeight: 'bold',
       lineHeight: 'tight'
     }}>
       {userData ? (
-        userData.punishment === "true" ? (
+        userData.punishment === true ? (
           "Sí"
         ) : (
           "N/A"
         )
       ) : (
-        "Cargando"
+        <p>Cargando</p>
       )}
     </p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <p style={{
-            color: '#888d5e',
+            color: userData?.punishment ? 'white' : '#888d5e',
             fontSize: '0.875rem',
             fontWeight: 'normal',
             lineHeight: 'normal'
